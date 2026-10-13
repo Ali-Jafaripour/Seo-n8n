@@ -1,0 +1,194 @@
+{
+  "updatedAt": "2026-10-13T17:33:33.525Z",
+  "createdAt": "2026-10-13T17:33:33.525Z",
+  "id": "cSchemaApi000001",
+  "name": "Schema Agent - Custom API",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-schema",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -500,
+        0
+      ],
+      "id": "webhook-custom-api-01",
+      "name": "Webhook (Receive Article)",
+      "webhookId": "generate-schema-custom"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize incoming payload from Custom Webhook / API\nconst item = $input.item.json;\nconst body = item.body || item;\n\nreturn {\n  id: body.id || body.post_id || \"custom-article\",\n  title: body.title || \"Untitled Article\",\n  url: body.url || \"\",\n  content: body.content || body.text || \"\"\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -250,
+        0
+      ],
+      "id": "normalize-input-02",
+      "name": "Normalize Input"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Article Title: ' + $json.title + '\\nURL: ' + $json.url + '\\n\\nContent:\\n' + $json.content }}",
+        "options": {
+          "systemMessage": "You are a Senior Technical SEO Expert. Extract and generate a complete, error-free JSON-LD schema (@graph format combining Article, FAQPage, BreadcrumbList, and HowTo if applicable) from the article content. Output ONLY valid JSON inside a ```json markdown block without any additional conversational text."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        50,
+        0
+      ],
+      "id": "ai-schema-agent-03",
+      "name": "SEO Schema Agent"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        50,
+        200
+      ],
+      "id": "openrouter-model-04",
+      "name": "OpenRouter (GPT-4o-mini)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse JSON-LD from AI output and format response\nconst item = $input.item.json;\nconst rawOutput = item.output || item.text || item.response || \"\";\n\nlet schemaJson = {};\nlet jsonString = rawOutput;\nconst match = rawOutput.match(/```(?:json)?\\s*([\\s\\S]*?)\\s*```/);\nif (match) {\n  jsonString = match[1];\n}\n\ntry {\n  schemaJson = JSON.parse(jsonString.trim());\n} catch (e) {\n  schemaJson = {\n    error: \"Failed to parse JSON\",\n    raw_output: rawOutput\n  };\n}\n\nreturn {\n  success: !schemaJson.error,\n  article_id: item.id,\n  title: item.title,\n  url: item.url,\n  schema: schemaJson,\n  html_script_tag: `<script type=\\\"application/ld+json\\\">\\n${JSON.stringify(schemaJson, null, 2)}\\n</script>`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        350,
+        0
+      ],
+      "id": "parse-jsonld-05",
+      "name": "Extract & Format JSON-LD"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        650,
+        0
+      ],
+      "id": "respond-webhook-06",
+      "name": "Respond with Schema JSON"
+    }
+  ],
+  "connections": {
+    "Webhook (Receive Article)": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "SEO Schema Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter (GPT-4o-mini)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SEO Schema Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEO Schema Agent": {
+      "main": [
+        [
+          {
+            "node": "Extract & Format JSON-LD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract & Format JSON-LD": {
+      "main": [
+        [
+          {
+            "node": "Respond with Schema JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "versionId": "896ae7b0-7402-44a9-a550-a185364882aa",
+  "activeVersionId": null,
+  "versionCounter": 1,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-10-13T17:33:33.527Z",
+      "createdAt": "2026-10-13T17:33:33.527Z",
+      "role": "workflow:owner",
+      "workflowId": "cSchemaApi000001",
+      "projectId": "l5al4oZDXnkH96CH",
+      "project": {
+        "updatedAt": "2026-10-13T15:44:14.017Z",
+        "createdAt": "2026-10-13T15:36:53.307Z",
+        "id": "l5al4oZDXnkH96CH",
+        "name": "Ali Jafaripour <alijafaripour82@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "44cfa704-3d03-41be-b948-9ca14af38618"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

@@ -1,0 +1,265 @@
+{
+  "updatedAt": "2026-10-13T16:59:37.225Z",
+  "createdAt": "2026-10-13T16:38:35.495Z",
+  "id": "yXGCoIXFeLu4v5DF",
+  "name": "Schema Agent - WordPress",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are a Senior Technical SEO Expert. Extract and generate a complete, error-free JSON-LD schema (@graph format combining Article, FAQPage, and HowTo if applicable) from the article content."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        48,
+        -208
+      ],
+      "id": "7be8fa5e-1a63-4c09-aecf-518604c83d00",
+      "name": "SEO Schema Agent"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        16
+      ],
+      "id": "63632e65-0fe7-460a-93cc-53e9d3f82294",
+      "name": "OpenRouter"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.outputParserAutoFixing",
+      "typeVersion": 1,
+      "position": [
+        192,
+        16
+      ],
+      "id": "7c6e1433-c7ad-4340-bac9-805f78325c5b",
+      "name": "Auto-fixing Output Parser"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        128,
+        224
+      ],
+      "id": "cda98f3c-a76f-49e4-81f0-042e4f8c6bc2",
+      "name": "OpenRouter1"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        272,
+        224
+      ],
+      "id": "49399ad6-18fd-4b6b-a8bf-ada5e832142b",
+      "name": "Structured Output"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "postId": "={{ $node[\"Get WP Post Content\"].json[\"id\"] }}",
+        "updateFields": {}
+      },
+      "type": "n8n-nodes-base.wordpress",
+      "typeVersion": 1,
+      "position": [
+        448,
+        -208
+      ],
+      "id": "9b5c8746-7d3d-49b6-bd8f-ebc3e76be9f2",
+      "name": "Inject Schema to WordPress"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -720,
+        -176
+      ],
+      "id": "26247e8f-eb3b-48e6-94a6-4584ae3608bb",
+      "name": "Schedule (Every 24h)"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 20,
+        "options": {
+          "status": [
+            "publish"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.wordpress",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        -176
+      ],
+      "id": "4bcb1c21-e689-479e-967b-1304949591bd",
+      "name": "Get Recent WP Posts"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "check-schema-empty",
+              "leftValue": "={{ $json.custom_fields?.schema_json_ld }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -272,
+        -176
+      ],
+      "id": "146635d7-5bb1-4ed3-9176-a6b2932cafd8",
+      "name": "If Schema is Empty"
+    }
+  ],
+  "connections": {
+    "OpenRouter": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SEO Schema Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEO Schema Agent": {
+      "main": [
+        [
+          {
+            "node": "Inject Schema to WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule (Every 24h)": {
+      "main": [
+        [
+          {
+            "node": "Get Recent WP Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Recent WP Posts": {
+      "main": [
+        [
+          {
+            "node": "If Schema is Empty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Schema is Empty": {
+      "main": [
+        [
+          {
+            "node": "SEO Schema Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Recent WP Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "9b72ef32-a872-4e80-b896-c6de083691a1",
+  "activeVersionId": null,
+  "versionCounter": 6,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-10-13T16:38:35.498Z",
+      "createdAt": "2026-10-13T16:38:35.498Z",
+      "role": "workflow:owner",
+      "workflowId": "yXGCoIXFeLu4v5DF",
+      "projectId": "l5al4oZDXnkH96CH",
+      "project": {
+        "updatedAt": "2026-10-13T15:44:14.017Z",
+        "createdAt": "2026-10-13T15:36:53.307Z",
+        "id": "l5al4oZDXnkH96CH",
+        "name": "Ali Jafaripour <alijafaripour82@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "44cfa704-3d03-41be-b948-9ca14af38618"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}
