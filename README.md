@@ -62,7 +62,7 @@ n8n/
 1. وارد [GitHub](https://github.com) شوید و یک **New Repository** خالی (بدون README و .gitignore) بسازید.
 2. در ترمینال همین پوشه، این دو دستور را اجرا کنید (آدرس ریپازیتوری خود را جایگزین کنید):
 ```bash
-git remote add origin https://github.com/USERNAME/REPO_NAME.git
+git remote add origin https://github.com/Ali-Jafaripour/Seo-n8n.git
 git push -u origin main
 ```
 از این به بعد، هر بار دستور `./sync.sh "پیام"` را بزنید، مستقیماً به گیت‌هاب شما هم ارسال خواهد شد.
@@ -85,8 +85,8 @@ git push -u origin main
 اگر در آینده خواستید این ستاپ را روی سیستم دیگری بالا بیاورید:
 ```bash
 # ۱. کلون کردن ریپازیتوری
-git clone <آدرس-ریپازیتوری-شما>
-cd n8n
+git clone https://github.com/Ali-Jafaripour/Seo-n8n.git
+cd Seo-n8n
 
 # ۲. ایجاد فایل تنظیمات محیطی
 cp .env.example .env
