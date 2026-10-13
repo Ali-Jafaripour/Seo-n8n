@@ -9,86 +9,6 @@
   "nodes": [
     {
       "parameters": {
-        "options": {
-          "systemMessage": "You are a Senior Technical SEO Expert. Extract and generate a complete, error-free JSON-LD schema (@graph format combining Article, FAQPage, and HowTo if applicable) from the article content."
-        }
-      },
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 1.7,
-      "position": [
-        48,
-        -208
-      ],
-      "id": "7be8fa5e-1a63-4c09-aecf-518604c83d00",
-      "name": "SEO Schema Agent"
-    },
-    {
-      "parameters": {
-        "model": "openai/gpt-4o-mini",
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
-      "typeVersion": 1,
-      "position": [
-        -32,
-        16
-      ],
-      "id": "63632e65-0fe7-460a-93cc-53e9d3f82294",
-      "name": "OpenRouter"
-    },
-    {
-      "parameters": {},
-      "type": "@n8n/n8n-nodes-langchain.outputParserAutoFixing",
-      "typeVersion": 1,
-      "position": [
-        192,
-        16
-      ],
-      "id": "7c6e1433-c7ad-4340-bac9-805f78325c5b",
-      "name": "Auto-fixing Output Parser"
-    },
-    {
-      "parameters": {
-        "model": "openai/gpt-4o-mini",
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
-      "typeVersion": 1,
-      "position": [
-        128,
-        224
-      ],
-      "id": "cda98f3c-a76f-49e4-81f0-042e4f8c6bc2",
-      "name": "OpenRouter1"
-    },
-    {
-      "parameters": {},
-      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
-      "typeVersion": 1.2,
-      "position": [
-        272,
-        224
-      ],
-      "id": "49399ad6-18fd-4b6b-a8bf-ada5e832142b",
-      "name": "Structured Output"
-    },
-    {
-      "parameters": {
-        "operation": "update",
-        "postId": "={{ $node[\"Get WP Post Content\"].json[\"id\"] }}",
-        "updateFields": {}
-      },
-      "type": "n8n-nodes-base.wordpress",
-      "typeVersion": 1,
-      "position": [
-        448,
-        -208
-      ],
-      "id": "9b5c8746-7d3d-49b6-bd8f-ebc3e76be9f2",
-      "name": "Inject Schema to WordPress"
-    },
-    {
-      "parameters": {
         "rule": {
           "interval": [
             {
@@ -101,11 +21,28 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -720,
-        -176
+        -780,
+        -100
       ],
       "id": "26247e8f-eb3b-48e6-94a6-4584ae3608bb",
       "name": "Schedule (Every 24h)"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-schema",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -780,
+        -320
+      ],
+      "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "name": "Webhook (Custom Sites / API)",
+      "webhookId": "generate-schema-webhook"
     },
     {
       "parameters": {
@@ -120,8 +57,8 @@
       "type": "n8n-nodes-base.wordpress",
       "typeVersion": 1,
       "position": [
-        -496,
-        -176
+        -540,
+        -100
       ],
       "id": "4bcb1c21-e689-479e-967b-1304949591bd",
       "name": "Get Recent WP Posts"
@@ -153,41 +90,237 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -272,
-        -176
+        -320,
+        -100
       ],
       "id": "146635d7-5bb1-4ed3-9176-a6b2932cafd8",
       "name": "If Schema is Empty"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize inputs from WordPress or Webhook / Custom API\nconst item = $input.item.json;\n\n// Check if incoming data is from Webhook\nif (item.body && (item.body.content || item.body.text)) {\n  const b = item.body;\n  return {\n    source: b.callback_url ? 'custom_api' : 'webhook',\n    id: b.id || b.post_id || 'custom-post',\n    title: b.title || 'Untitled Article',\n    url: b.url || '',\n    content: b.content || b.text,\n    callback_url: b.callback_url || null,\n    api_key: b.api_key || null\n  };\n}\n\n// Fallback to WordPress structure\nreturn {\n  source: 'wordpress',\n  id: item.id,\n  title: (item.title && item.title.rendered) ? item.title.rendered : (item.title || ''),\n  url: item.link || '',\n  content: (item.content && item.content.rendered) ? item.content.rendered : (item.content || ''),\n  callback_url: null,\n  api_key: null\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        -200
+      ],
+      "id": "e8d9c0b1-a2f3-4e5d-6c7b-8a9b0c1d2e3f",
+      "name": "Normalize Article Input"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Article Title: ' + $json.title + '\\nURL: ' + $json.url + '\\n\\nContent:\\n' + $json.content }}",
+        "options": {
+          "systemMessage": "You are a Senior Technical SEO Expert. Extract and generate a complete, valid JSON-LD schema (@graph format combining Article, FAQPage, BreadcrumbList, and HowTo if applicable) from the article content. Output ONLY valid JSON inside a ```json block."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        160,
+        -200
+      ],
+      "id": "7be8fa5e-1a63-4c09-aecf-518604c83d00",
+      "name": "SEO Schema Agent"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        160,
+        20
+      ],
+      "id": "63632e65-0fe7-460a-93cc-53e9d3f82294",
+      "name": "OpenRouter"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse and validate generated JSON-LD schema\nconst item = $input.item.json;\nconst rawOutput = item.output || item.text || item.response || \"\";\n\nlet schemaJson = {};\nlet jsonString = rawOutput;\nconst match = rawOutput.match(/```(?:json)?\\s*([\\s\\S]*?)\\s*```/);\nif (match) {\n  jsonString = match[1];\n}\n\ntry {\n  schemaJson = JSON.parse(jsonString.trim());\n} catch (e) {\n  schemaJson = {\n    error: \"JSON parsing failed\",\n    raw_output: rawOutput\n  };\n}\n\nreturn {\n  source: item.source,\n  id: item.id,\n  title: item.title,\n  url: item.url,\n  callback_url: item.callback_url,\n  api_key: item.api_key,\n  schema: schemaJson,\n  schema_script: `<script type=\\\"application/ld+json\\\">\\n${JSON.stringify(schemaJson, null, 2)}\\n</script>`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        -200
+      ],
+      "id": "f7e8d9c0-b1a2-4f3e-5d6c-7b8a9b0c1d2e",
+      "name": "Extract & Validate Schema"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.source }}",
+                    "rightValue": "wordpress",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.source }}",
+                    "rightValue": "webhook",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.source }}",
+                    "rightValue": "custom_api",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        680,
+        -200
+      ],
+      "id": "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e",
+      "name": "Route by Destination"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "postId": "={{ $json.id }}",
+        "updateFields": {
+          "customFields": {
+            "customField": [
+              {
+                "key": "schema_json_ld",
+                "value": "={{ JSON.stringify($json.schema) }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.wordpress",
+      "typeVersion": 1,
+      "position": [
+        960,
+        -340
+      ],
+      "id": "9b5c8746-7d3d-49b6-bd8f-ebc3e76be9f2",
+      "name": "Inject Schema to WordPress"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, post_id: $json.id, schema: $json.schema, html_tag: $json.schema_script }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        -180
+      ],
+      "id": "c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6f",
+      "name": "Respond to Webhook (Return JSON-LD)"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $json.callback_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $json.api_key }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ post_id: $json.id, schema: $json.schema, schema_html: $json.schema_script }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        -20
+      ],
+      "id": "d3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7a",
+      "name": "Update Custom Site API"
     }
   ],
   "connections": {
-    "OpenRouter": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "SEO Schema Agent",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "SEO Schema Agent": {
+    "Schedule (Every 24h)": {
       "main": [
         [
           {
-            "node": "Inject Schema to WordPress",
+            "node": "Get Recent WP Posts",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Schedule (Every 24h)": {
+    "Webhook (Custom Sites / API)": {
       "main": [
         [
           {
-            "node": "Get Recent WP Posts",
+            "node": "Normalize Article Input",
             "type": "main",
             "index": 0
           }
@@ -209,14 +342,76 @@
       "main": [
         [
           {
+            "node": "Normalize Article Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Article Input": {
+      "main": [
+        [
+          {
             "node": "SEO Schema Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SEO Schema Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEO Schema Agent": {
+      "main": [
+        [
+          {
+            "node": "Extract & Validate Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract & Validate Schema": {
+      "main": [
+        [
+          {
+            "node": "Route by Destination",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Destination": {
+      "main": [
+        [
+          {
+            "node": "Inject Schema to WordPress",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Get Recent WP Posts",
+            "node": "Respond to Webhook (Return JSON-LD)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Custom Site API",
             "type": "main",
             "index": 0
           }
@@ -232,9 +427,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "c2dd0d2b-8049-4d49-9d25-7911bf37d716",
+  "versionId": "38ba4caa-8e8a-4dd9-b184-e6c38829ffa5",
   "activeVersionId": null,
-  "versionCounter": 6,
+  "versionCounter": 7,
   "triggerCount": 0,
   "sourceWorkflowId": null,
   "tags": [],
