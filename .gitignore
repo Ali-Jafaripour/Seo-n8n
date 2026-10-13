@@ -1,0 +1,16 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Temporary and log files
+*.log
+/tmp/
+
+# Editor directories
+.vscode/
+.idea/

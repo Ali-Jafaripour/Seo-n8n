@@ -1,0 +1,802 @@
+{
+  "updatedAt": "2026-10-13T17:10:57.343Z",
+  "createdAt": "2026-10-13T17:09:07.793Z",
+  "id": "8OMxoR1X3k3FiZhw",
+  "name": "Find internal linking opportunities using SerAPI and Google Sheets",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "batchSize": 5,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        80,
+        0
+      ],
+      "id": "03d2d7dd-7345-4d54-99d2-d99469be8e70",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "url": "https://serpapi.com/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "serpApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.Keyword }} site:{{ $json.Domain }} -inurl:{{$json.URL }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        432,
+        16
+      ],
+      "id": "4dfef646-cb4e-4e63-a164-7b7263518863",
+      "name": "Get search results using SerpAPI"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "eae05e00-7188-4cca-994f-0cdf091e5618",
+              "name": "URL",
+              "type": "string",
+              "value": "={{ $('Loop Over Items').item.json.URL }}"
+            },
+            {
+              "id": "kw-assignment",
+              "name": "Keyword",
+              "type": "string",
+              "value": "={{ $('Loop Over Items').item.json.Keyword }}"
+            },
+            {
+              "id": "1e7647fb-a137-4971-8f8c-5f0709d0f92f",
+              "name": "organic_results",
+              "type": "array",
+              "value": "={{ $json.organic_results.map(item => item.link) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        592,
+        16
+      ],
+      "id": "aeef91f0-2826-4721-bb35-aee8df9f1127",
+      "name": "Extract links from JSON"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1U0whmy1d7wPoWTNTa1u68QrLTE1NqYgyyFXxARWo_1M",
+          "cachedResultName": "Find internal links using SerpAPI - N8N demo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultName": "Internal links"
+        },
+        "columns": {
+          "value": {
+            "URL": "={{ $json.URL }}",
+            "Internal link 1": "={{ $json.organic_results[0] ?$json.organic_results[0] : \"N/A\"}}"
+          },
+          "schema": [
+            {
+              "id": "URL",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "URL"
+            },
+            {
+              "id": "Internal link 1",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "Internal link 1"
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "URL"
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        784,
+        16
+      ],
+      "id": "db9a6d88-fc82-4361-ad19-bb9894166b16",
+      "name": "Add internal URL to Google Sheet"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wordpress",
+      "typeVersion": 1,
+      "position": [
+        960,
+        16
+      ],
+      "id": "9297a1dd-e0db-4d2b-92f5-52215cdb91bb",
+      "name": "Get Post from WordPress"
+    },
+    {
+      "parameters": {
+        "jsCode": "// این کد کلمه کلیدی رو توی متن پیدا می‌کنه و اولین نمونه اش رو به لینک داخلی تبدیل می‌کنه\nconst post = $input.item.json;\nlet content = post.content || '';\nconst keyword = $('Extract links from JSON').item.json.Keyword;\nconst targetLink =$('Extract links from JSON').item.json.organic_results[0];\n\nif (keyword && targetLink && content.includes(keyword)) {\n  // جایگزینی اولین کلمه کلیدی با تگ لینک HTML\n  const regex = new RegExp(keyword, 'i');\n  content = content.replace(regex, `<a href=\"${targetLink}\">${keyword}</a>`);\n}\n\nreturn {\n  json: {\n    id: post.id,\n    content: content\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        16
+      ],
+      "id": "b96c0650-2205-45e9-b043-2257744efeac",
+      "name": "Inject HTML Link Code"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "postId": "={{ $json.id }}",
+        "updateFields": {
+          "content": "={{ $json.content }}"
+        }
+      },
+      "type": "n8n-nodes-base.wordpress",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        16
+      ],
+      "id": "65c42141-214d-4ac2-a859-4dc3bfaf3c75",
+      "name": "Update WP Post with New Link"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1U0whmy1d7wPoWTNTa1u68QrLTE1NqYgyyFXxARWo_1M",
+          "cachedResultName": "Find internal links using SerpAPI - N8N demo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultName": "Internal links"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Internal link 1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -288,
+        0
+      ],
+      "id": "f643af4e-34b5-4c1f-b817-344dce07cba5",
+      "name": "Get URLs and keywords"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -528,
+        0
+      ],
+      "id": "eab11ca2-4c95-40f7-899e-61f8868c4267",
+      "name": "Manual trigger"
+    },
+    {
+      "parameters": {
+        "content": "## Get URLs and keywords\nIn this node, we're getting the different URLs that we want suggestions for, and the keywords/topics those pages are targeting.\n\nWe're filtering out everything that already has a value in the `internal link 1` column so we don't override rows we already processed in a previous run\n",
+        "height": 704,
+        "width": 320,
+        "color": 7
+      },
+      "id": "5582ec3c-76a6-4291-882a-f668089b0f86",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -128,
+        400
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Loop over URLs\nLoop over each URL to get the results. Here we're doing it in batches of 5\n\n:warning: Note :warning:\nDon't set the batch size too high or you'll start hitting rate limits for some of the APIs, especially Google Sheets. \n\nIf you have a small number of URLs to process you can leave it at five. If you have a larger set of URLs consider setting the batch size lower, or adding a wait node at the end.\n\n",
+        "height": 704,
+        "width": 320,
+        "color": 7
+      },
+      "id": "2a49debe-8602-4844-bfdc-c5c0c680fadb",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        224,
+        400
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Get search results using SerpAPI\nGet the search results from SerpAPI.\n\nWe're searching for the target keyword, while doing a `site:<domain>` search so we only get results from our site.\n\nWe use `-inurl:<url>` to exclude the URL we are currently working with. This gives us results similar to the URL we have that we can building internal links from.\n\n:warning: Note :warning:\nIf you have to process a large set of URLs it's worth [setting up a programmable search engine](https://drlee.io/build-your-own-google-create-a-custom-search-engine-with-trusted-sources-c1c113e845cc) instead of using SerAPI\n\n",
+        "height": 704,
+        "width": 320,
+        "color": 7
+      },
+      "id": "3e36f3c8-2639-4a74-addb-29e244e5f6bc",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        576,
+        400
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Extract organic links from JSON\nSerpAPI gives us a bunch of data we don't need for this use case so we just filter for the organic results. specifically, we filter the URLs it gives us\n\n",
+        "height": 704,
+        "width": 320,
+        "color": 7
+      },
+      "id": "a1007d76-d045-45c6-a079-a66dd05d59d5",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        928,
+        400
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Update Google Sheet\nHere we're adding the URLs to the different column in our sheet.\n\nNote that we're using an inline `if` statement so, if there's no URL present, it just adds 'N/A' to our Google Sheet. Not all URLs will have 10 internal link opportunities\n\n",
+        "height": 704,
+        "width": 320,
+        "color": 7
+      },
+      "id": "d11b4280-21f3-47f9-bd9e-c1c0d304c462",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1280,
+        400
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Overview\n\nUse this workflow to spot internal linking ideas on your site and improve your search performance. It takes your target URLs and keywords, finds related pages, and suggests where to add links. Strong internal linking helps search engines understand your site.\n\n## How it works\n- You provide a list of target URLs and the keywords you want to rank for\n- The workflow uses the SERP API to search your site for related pages, skipping the target URL\n- It filters the results and pulls relevant URLs\n- It writes the suggestions to a Google Sheet, and adds “N/A” if no good matches are found\n\n## Setup steps\n1. Turn on the Google Sheets API and create a sheet with your domain, target URLs, and keywords\n2. Create a SERP API account and get an API key\n3. Optional: Set up a Google Programmable Search Engine if you prefer not to use the SERP API\n4. Add your SERP API key and Google Sheets credentials to n8n.\n5. Run the workflow to generate internal link suggestions in your Google Sheet",
+        "height": 704,
+        "width": 400,
+        "color": 7
+      },
+      "id": "5922e0df-ae46-4992-8342-a91540444f3a",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -736,
+        400
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "batchSize": 5,
+        "options": {}
+      },
+      "id": "4367391c-0572-4b8b-89d2-e52266615768",
+      "name": "Loop Over Items1",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [
+        336,
+        864
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "url": "https://serpapi.com/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "serpApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.Keyword }} site:{{ $json.Domain }} -inurl:{{ $json.URL }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "74b7716f-4ecb-47a3-af61-ed77f8d4b308",
+      "name": "Get search results using SerpAPI1",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        688,
+        880
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "eae05e00-7188-4cca-994f-0cdf091e5618",
+              "name": "URL",
+              "type": "string",
+              "value": "={{ $('Loop Over Items1').item.json.URL }}"
+            },
+            {
+              "id": "1e7647fb-a137-4971-8f8c-5f0709d0f92f",
+              "name": "organic_results",
+              "type": "array",
+              "value": "={{ $json.organic_results.map(item => item.link) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0f184613-fe57-4954-b752-1dcd71e8a545",
+      "name": "Extract links from JSON1",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1040,
+        880
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1U0whmy1d7wPoWTNTa1u68QrLTE1NqYgyyFXxARWo_1M",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1U0whmy1d7wPoWTNTa1u68QrLTE1NqYgyyFXxARWo_1M/edit?usp=drivesdk",
+          "cachedResultName": "Find internal links using SerpAPI - N8N demo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1U0whmy1d7wPoWTNTa1u68QrLTE1NqYgyyFXxARWo_1M/edit#gid=0",
+          "cachedResultName": "Internal links"
+        },
+        "columns": {
+          "value": {
+            "URL": "={{ $json.URL }}",
+            "Internal link 1": "={{ $json.organic_results[0] ? $json.organic_results[0] : \"N/A\"}}",
+            "Internal link 2": "={{ $json.organic_results[1] ? $json.organic_results[1] : \"N/A\"}}",
+            "Internal link 3": "={{ $json.organic_results[2] ? $json.organic_results[2] : \"N/A\"}}",
+            "Internal link 4": "={{ $json.organic_results[3] ? $json.organic_results[3] : \"N/A\"}}",
+            "Internal link 5": "={{ $json.organic_results[4] ? $json.organic_results[4] : \"N/A\"}}",
+            "Internal link 6": "={{ $json.organic_results[5] ? $json.organic_results[5] : \"N/A\"}}",
+            "Internal link 7": "={{ $json.organic_results[6] ? $json.organic_results[6] : \"N/A\"}}",
+            "Internal link 8": "={{ $json.organic_results[7] ? $json.organic_results[7] : \"N/A\"}}",
+            "Internal link 9": "={{ $json.organic_results[8] ? $json.organic_results[8] : \"N/A\"}}",
+            "Internal link 10": "={{ $json.organic_results[9] ? $json.organic_results[9] : \"N/A\"}}"
+          },
+          "schema": [
+            {
+              "id": "Domain",
+              "type": "string",
+              "display": true,
+              "removed": true,
+              "required": false,
+              "displayName": "Domain",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "URL",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "URL",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Keyword",
+              "type": "string",
+              "display": true,
+              "removed": true,
+              "required": false,
+              "displayName": "Keyword",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Internal link 1",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Internal link 1",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Internal link 2",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Internal link 2",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Internal link 3",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Internal link 3",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Internal link 4",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Internal link 4",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Internal link 5",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Internal link 5",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Internal link 6",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Internal link 6",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Internal link 7",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Internal link 7",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Internal link 8",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Internal link 8",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Internal link 9",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Internal link 9",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Internal link 10",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Internal link 10",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "type": "number",
+              "display": true,
+              "removed": true,
+              "readOnly": true,
+              "required": false,
+              "displayName": "row_number",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "URL"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "b67a5d0e-5fe8-4b3a-8cb8-35a6e5f4def1",
+      "name": "Add internal URL to Google Sheet1",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1392,
+        880
+      ],
+      "typeVersion": 4.7
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1U0whmy1d7wPoWTNTa1u68QrLTE1NqYgyyFXxARWo_1M",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1U0whmy1d7wPoWTNTa1u68QrLTE1NqYgyyFXxARWo_1M/edit?usp=drivesdk",
+          "cachedResultName": "Find internal links using SerpAPI - N8N demo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1U0whmy1d7wPoWTNTa1u68QrLTE1NqYgyyFXxARWo_1M/edit#gid=0",
+          "cachedResultName": "Internal links"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Internal link 1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "164b8221-905f-4352-bb0c-07f2ee77c601",
+      "name": "Get URLs and keywords1",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        -16,
+        864
+      ],
+      "typeVersion": 4.7
+    }
+  ],
+  "connections": {
+    "Manual trigger": {
+      "main": [
+        [
+          {
+            "node": "Get URLs and keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Get search results using SerpAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get URLs and keywords": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract links from JSON": {
+      "main": [
+        [
+          {
+            "node": "Add internal URL to Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add internal URL to Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Get Post from WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Post from WordPress": {
+      "main": [
+        [
+          {
+            "node": "Inject HTML Link Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inject HTML Link Code": {
+      "main": [
+        [
+          {
+            "node": "Update WP Post with New Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update WP Post with New Link": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get search results using SerpAPI": {
+      "main": [
+        [
+          {
+            "node": "Extract links from JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Get search results using SerpAPI1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get search results using SerpAPI1": {
+      "main": [
+        [
+          {
+            "node": "Extract links from JSON1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract links from JSON1": {
+      "main": [
+        [
+          {
+            "node": "Add internal URL to Google Sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add internal URL to Google Sheet1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get URLs and keywords1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "fcd49fde-ca84-40cd-b8ef-6a4b99ba1667",
+  "activeVersionId": null,
+  "versionCounter": 21,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-10-13T17:09:07.796Z",
+      "createdAt": "2026-10-13T17:09:07.796Z",
+      "role": "workflow:owner",
+      "workflowId": "8OMxoR1X3k3FiZhw",
+      "projectId": "l5al4oZDXnkH96CH",
+      "project": {
+        "updatedAt": "2026-10-13T15:44:14.017Z",
+        "createdAt": "2026-10-13T15:36:53.307Z",
+        "id": "l5al4oZDXnkH96CH",
+        "name": "Ali Jafaripour <alijafaripour82@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "44cfa704-3d03-41be-b948-9ca14af38618"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}
