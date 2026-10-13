@@ -4,7 +4,8 @@
 
 | نام ورک‌فلو | شناسه (ID) | وضعیت فعال | تعداد نودها | نام فایل |
 | :--- | :--- | :---: | :---: | :--- |
-| **Blog  Agent** | `zZSEv1snoJpwMUfm` | ⚪ غیرفعال | 30 | [`Blog Agent.json`](./Blog Agent.json) |
+| **Blog Agent - WordPress** | `zZSEv1snoJpwMUfm` | ⚪ غیرفعال | 30 | [`Blog Agent - WordPress.json`](./Blog Agent - WordPress.json) |
 | **Schema Agent - WordPress** | `yXGCoIXFeLu4v5DF` | ⚪ غیرفعال | 9 | [`Schema Agent - WordPress.json`](./Schema Agent - WordPress.json) |
 | **Find internal linking opportunities using SerAPI and Google Sheets** | `8OMxoR1X3k3FiZhw` | ⚪ غیرفعال | 20 | [`Find internal linking opportunities using SerAPI and Google Sheets.json`](./Find internal linking opportunities using SerAPI and Google Sheets.json) |
 | **Schema Agent - Custom API** | `cSchemaApi000001` | ⚪ غیرفعال | 6 | [`Schema Agent - Custom API.json`](./Schema Agent - Custom API.json) |
+| **Blog Agent - Custom API** | `cBlogAgentApi0001` | ⚪ غیرفعال | 24 | [`Blog Agent - Custom API.json`](./Blog Agent - Custom API.json) |
