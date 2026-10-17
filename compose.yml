@@ -83,7 +83,7 @@ services:
       sandbox-api:
         condition: service_healthy
     ports:
-      - '5678:5678' # the only port that should be internet-facing
+      - '${N8N_PORT:-5678}:${N8N_PORT:-5678}' # the only port that should be internet-facing
     env_file: .env
     volumes:
       - n8n-data:/home/node/.n8n
