@@ -83,7 +83,7 @@ services:
       sandbox-api:
         condition: service_healthy
     ports:
-      - '${N8N_PORT:-5678}:${N8N_PORT:-5678}' # the only port that should be internet-facing
+      - '127.0.0.1:${N8N_PORT:-5678}:${N8N_PORT:-5678}' # bind to localhost so traffic must go through reverse proxy
     env_file: .env
     volumes:
       - n8n-data:/home/node/.n8n
